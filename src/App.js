@@ -1,18 +1,18 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
-import { Bar, Pie } from 'react-chartjs-2';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title, LineElement, PointElement } from 'chart.js';
+import { Bar, Pie, Line } from 'react-chartjs-2';
 import './App.css';
 
 import { Settings } from './Settings';
 
 // Chart.js の必要なコンポーネントを登録
-ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
+ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title, LineElement, PointElement);
 
 
 // --- 定数 ---
 const MATERIALS_KEY = 'inventoryMaterialsV2';
 const RECIPES_KEY = 'inventoryRecipesV2';
-const SALES_KEY = 'inventorySalesV1';
+const SALES_KEY = 'inventorySalesV2';
 
 // --- ローカルストレージ操作 ---
 function loadFromStorage(key, fallback = []) {
@@ -53,35 +53,62 @@ function parseDateString(dateString) {
 
 function App() {
   // --- ステート定義 ---
-  const [materials, setMaterials] = useState([]);
-  const [recipes, setRecipes] =useState([]);
-  const [salesLog, setSalesLog] = useState([]);
+  const [materials, setMaterials] = useState([
+    { id: 1, name: '玉ねぎ', stock: 50, deadline: 10, consumed: 10 },
+    { id: 2, name: '豚肉', stock: 30, deadline: 5, consumed: 5 },
+    { id: 3, name: 'キャベツ', stock: 40, deadline: 8, consumed: 8 },
+    { id: 4, name: '麺', stock: 100, deadline: 20, consumed: 20 },
+  ]);
+  const [recipes, setRecipes] =useState([
+    { id: 1, name: '豚玉', price: 600, items: [{ materialId: 1, qty: 1 }, { materialId: 2, qty: 0.5 }, { materialId: 3, qty: 1 }], soldCount: 3 },
+    { id: 2, name: '焼きそば', price: 750, items: [{ materialId: 4, qty: 1 }, { materialId: 3, qty: 0.8 }, { materialId: 2, qty: 0.7 }, { materialId: 1, qty: 0.5 }], soldCount: 5 },
+  ]);
+  const [salesLog, setSalesLog] = useState([
+    { id: 1, recipeId: 1, qty: 1, pricePerUnit: 600, timestamp: new Date(new Date().setHours(8, 0, 0, 0)).toISOString() },
+    { id: 2, recipeId: 2, qty: 1, pricePerUnit: 750, timestamp: new Date(new Date().setHours(8, 30, 0, 0)).toISOString() },
+    { id: 3, recipeId: 1, qty: 2, pricePerUnit: 600, timestamp: new Date(new Date().setHours(9, 0, 0, 0)).toISOString() },
+    { id: 4, recipeId: 2, qty: 1, pricePerUnit: 750, timestamp: new Date(new Date().setHours(9, 15, 0, 0)).toISOString() },
+    { id: 5, recipeId: 1, qty: 1, pricePerUnit: 600, timestamp: new Date(new Date().setHours(10, 0, 0, 0)).toISOString() },
+    { id: 6, recipeId: 2, qty: 2, pricePerUnit: 750, timestamp: new Date(new Date().setHours(10, 45, 0, 0)).toISOString() },
+    { id: 7, recipeId: 1, qty: 1, pricePerUnit: 600, timestamp: new Date(new Date().setHours(11, 30, 0, 0)).toISOString() },
+    { id: 8, recipeId: 2, qty: 1, pricePerUnit: 750, timestamp: new Date(new Date().setHours(12, 0, 0, 0)).toISOString() },
+    { id: 9, recipeId: 1, qty: 3, pricePerUnit: 600, timestamp: new Date(new Date().setHours(13, 0, 0, 0)).toISOString() },
+    { id: 10, recipeId: 2, qty: 2, pricePerUnit: 750, timestamp: new Date(new Date().setHours(13, 30, 0, 0)).toISOString() },
+    { id: 11, recipeId: 1, qty: 1, pricePerUnit: 600, timestamp: new Date(new Date().setHours(14, 0, 0, 0)).toISOString() },
+    { id: 12, recipeId: 2, qty: 1, pricePerUnit: 750, timestamp: new Date(new Date().setHours(14, 15, 0, 0)).toISOString() },
+  ]);
   const [activeTab, setActiveTab] = useState('materials');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // --- ID管理 ---
-  const [nextMaterialId, setNextMaterialId] = useState(1);
-  const [nextRecipeId, setNextRecipeId] = useState(1);
-  const [nextSaleId, setNextSaleId] = useState(1);
+  const [nextMaterialId, setNextMaterialId] = useState(5);
+  const [nextRecipeId, setNextRecipeId] = useState(3);
+  const [nextSaleId, setNextSaleId] = useState(13);
 
   // --- 初期ロード (useEffect) ---
   useEffect(() => {
-    const loadedMaterials = loadFromStorage(MATERIALS_KEY, []).map(m => ({ ...m, consumed: m.consumed ?? 0 }));
-    setMaterials(loadedMaterials);
-    if (loadedMaterials.length > 0) {
-      setNextMaterialId(Math.max(...loadedMaterials.map(m => m.id), 0) + 1);
+    const initialMaterials = loadFromStorage(MATERIALS_KEY, materials).map(m => ({ ...m, consumed: m.consumed ?? 0 }));
+    setMaterials(initialMaterials);
+    if (initialMaterials.length > 0) {
+      setNextMaterialId(Math.max(...initialMaterials.map(m => m.id), 0) + 1);
+    } else {
+      setNextMaterialId(Math.max(...materials.map(m => m.id), 0) + 1);
     }
 
-    const loadedRecipes = loadFromStorage(RECIPES_KEY, []).map(r => ({ ...r, soldCount: r.soldCount ?? 0, price: r.price ?? 0 }));
-    setRecipes(loadedRecipes);
-    if (loadedRecipes.length > 0) {
-      setNextRecipeId(Math.max(...loadedRecipes.map(r => r.id), 0) + 1);
+    const initialRecipes = loadFromStorage(RECIPES_KEY, recipes).map(r => ({ ...r, soldCount: r.soldCount ?? 0, price: r.price ?? 0 }));
+    setRecipes(initialRecipes);
+    if (initialRecipes.length > 0) {
+      setNextRecipeId(Math.max(...initialRecipes.map(r => r.id), 0) + 1);
+    } else {
+      setNextRecipeId(Math.max(...recipes.map(r => r.id), 0) + 1);
     }
 
-    const loadedSales = loadFromStorage(SALES_KEY, []);
-    setSalesLog(loadedSales);
-    if (loadedSales.length > 0) {
-      setNextSaleId(Math.max(...loadedSales.map(s => s.id), 0) + 1);
+    const initialSales = loadFromStorage(SALES_KEY, salesLog);
+    setSalesLog(initialSales);
+    if (initialSales.length > 0) {
+      setNextSaleId(Math.max(...initialSales.map(s => s.id), 0) + 1);
+    } else {
+      setNextSaleId(Math.max(...salesLog.map(s => s.id), 0) + 1);
     }
   }, []);
 
@@ -173,7 +200,7 @@ function App() {
       recipeId: recipe.id,
       qty,
       pricePerUnit: recipe.price || 0,
-      date: getTodayKey(),
+      timestamp: new Date().toISOString(),
     };
     setSalesLog(prev => [...prev, newSale]);
     setNextSaleId(prev => prev + 1);
@@ -238,7 +265,7 @@ function App() {
           <div id="tab-recipes" className="tab-content active">
             <RecipeForm materials={materials} setRecipes={setRecipes} nextRecipeId={nextRecipeId} setNextRecipeId={setNextRecipeId} />
             <hr style={{ margin: '16px 0' }} />
-            <h3>登録済みの品名プリセット</h3>
+            <h3>登録済みの品名</h3>
             <RecipesTable recipes={recipes} materials={materials} onSell={handleSellRecipe} onDelete={handleDeleteRecipe} />
             <p className="hint">「売れた」数だけ、対応する材料の在庫数が減り、消費数に反映されます。</p>
           </div>
@@ -248,80 +275,106 @@ function App() {
   );
 }
 
-// --- 統計コンポーネント ---
 const StatsView = ({ salesLog, recipes }) => {
     const [filterType, setFilterType] = useState('today'); // 'today', 'all', 'custom'
     const [startDate, setStartDate] = useState(getTodayKey());
     const [endDate, setEndDate] = useState(getTodayKey());
 
-    const stats = useMemo(() => {
-        const todayKey = getTodayKey();
-        let filteredLog = salesLog;
+    const { summary, perRecipeStats, hourlySalesData } = useMemo(() => {
+        let log = salesLog;
 
         if (filterType === 'today') {
-            filteredLog = salesLog.filter(sale => sale.date === todayKey);
-        } else if (filterType === 'custom') {
-            const start = parseDateString(startDate);
-            const end = parseDateString(endDate);
-            end.setHours(23, 59, 59, 999); 
-
-            if (!startDate || !endDate || start > end) {
-                 return { summary: { totalQty: 0, totalSales: 0 }, items: [] };
-            }
-
-            filteredLog = salesLog.filter(sale => {
-                const saleDate = parseDateString(sale.date);
-                return saleDate >= start && saleDate <= end;
+            const todayStart = new Date();
+            todayStart.setHours(0, 0, 0, 0);
+            const todayEnd = new Date();
+            todayEnd.setHours(23, 59, 59, 999);
+            log = salesLog.filter(sale => {
+                const saleDate = new Date(sale.timestamp || sale.date);
+                return saleDate >= todayStart && saleDate <= todayEnd;
             });
+        } else if (filterType === 'custom' && startDate && endDate) {
+            const start = parseDateString(startDate);
+            start.setHours(0, 0, 0, 0);
+            const end = parseDateString(endDate);
+            end.setHours(23, 59, 59, 999);
+            if (start <= end) {
+                log = salesLog.filter(sale => {
+                    const saleDate = new Date(sale.timestamp || sale.date);
+                    return saleDate >= start && saleDate <= end;
+                });
+            }
         }
 
         const summary = { totalQty: 0, totalSales: 0 };
         const perRecipe = new Map();
+        const hourlySales = new Map(); // 品名ID -> 時間帯別売上数配列
 
-        filteredLog.forEach(sale => {
-            const saleAmount = sale.qty * sale.pricePerUnit;
+        log.forEach(sale => {
+            const saleAmount = sale.qty * (sale.pricePerUnit || 0);
             summary.totalQty += sale.qty;
             summary.totalSales += saleAmount;
+            
             const recipe = recipes.find(r => r.id === sale.recipeId);
             const name = recipe ? recipe.name : '(削除済みの品名)';
-            const entry = perRecipe.get(sale.recipeId) || { name, qty: 0, sales: 0 };
-            entry.qty += sale.qty;
-            entry.sales += saleAmount;
-            perRecipe.set(sale.recipeId, entry);
+            
+            // 品名ごと集計
+            const recipeEntry = perRecipe.get(sale.recipeId) || { id: sale.recipeId, name, qty: 0, sales: 0 };
+            recipeEntry.qty += sale.qty;
+            recipeEntry.sales += saleAmount;
+            perRecipe.set(sale.recipeId, recipeEntry);
+
+            // 時間帯別集計
+            const hour = new Date(sale.timestamp || sale.date).getHours();
+            if (!hourlySales.has(sale.recipeId)) {
+                hourlySales.set(sale.recipeId, { name, data: Array(24).fill(null) });
+            }
+            const recipeHourData = hourlySales.get(sale.recipeId).data;
+            recipeHourData[hour] = (recipeHourData[hour] || 0) + sale.qty;
         });
 
-        return { summary, items: Array.from(perRecipe.values()) };
+        const chartColors = ['#3e95cd', '#8e5ea2', '#3cba9f', '#e8c3b9', '#c45850', '#ff8c00', '#7b68ee', '#00fa9a'];
+        let colorIndex = 0;
+        const hourlyDatasets = [];
+        hourlySales.forEach(({ name, data }) => {
+            hourlyDatasets.push({
+                label: name,
+                data: data,
+                borderColor: chartColors[colorIndex % chartColors.length],
+                fill: false,
+                tension: 0.1,
+                spanGaps: true,
+            });
+            colorIndex++;
+        });
+        
+        const hourlySalesData = {
+            labels: Array.from({ length: 24 }, (_, i) => `${i}時`),
+            datasets: hourlyDatasets,
+        };
+        
+        return { 
+            summary, 
+            perRecipeStats: Array.from(perRecipe.values()),
+            hourlySalesData
+        };
     }, [salesLog, recipes, filterType, startDate, endDate]);
 
-    const chartData = {
-        labels: stats.items.map(item => item.name),
-        datasets: [
-            {
-                label: '売上合計',
-                data: stats.items.map(item => item.sales),
-                backgroundColor: 'rgba(37, 99, 235, 0.6)',
-                borderColor: 'rgba(37, 99, 235, 1)',
-                borderWidth: 1,
-            },
-            {
-                label: '売れた数',
-                data: stats.items.map(item => item.qty),
-                backgroundColor: 'rgba(249, 115, 22, 0.6)',
-                borderColor: 'rgba(249, 115, 22, 1)',
-                borderWidth: 1,
-            },
-        ],
+    const pieChartData = {
+        labels: perRecipeStats.map(item => item.name),
+        datasets: [{
+            data: perRecipeStats.map(item => item.sales),
+            backgroundColor: ['rgba(5, 150, 105, 0.7)', 'rgba(219, 39, 119, 0.7)', 'rgba(245, 158, 11, 0.7)', 'rgba(107, 114, 128, 0.7)', 'rgba(67, 56, 202, 0.7)', 'rgba(220, 38, 38, 0.7)'],
+        }],
     };
 
-    const pieChartData = {
-        labels: stats.items.map(item => item.name),
-        datasets: [{
-            data: stats.items.map(item => item.sales),
-            backgroundColor: [
-                'rgba(5, 150, 105, 0.7)', 'rgba(219, 39, 119, 0.7)', 'rgba(245, 158, 11, 0.7)',
-                'rgba(107, 114, 128, 0.7)', 'rgba(67, 56, 202, 0.7)', 'rgba(220, 38, 38, 0.7)'
-            ],
-        }],
+    const hourlySalesOptions = {
+        responsive: true,
+        plugins: { title: { display: true, text: '時間帯別 売上数' } },
+        scales: {
+            x: { title: { display: true, text: '時間' } },
+            y: { title: { display: true, text: '個数' }, beginAtZero: true }
+        },
+        aspectRatio: 2,
     };
 
     return (
@@ -341,26 +394,14 @@ const StatsView = ({ salesLog, recipes }) => {
             </div>
 
             <div className="stats-grid">
-                <div className="stat-item">
-                    <div className="stat-label">売れた合計数</div>
-                    <div className="stat-value">{stats.summary.totalQty}</div>
-                </div>
-                <div className="stat-item">
-                    <div className="stat-label">売上合計</div>
-                    <div className="stat-value">{stats.summary.totalSales}円</div>
-                </div>
+                <div className="stat-item"><div className="stat-label">売れた合計数</div><div className="stat-value">{summary.totalQty}</div></div>
+                <div className="stat-item"><div className="stat-label">売上合計</div><div className="stat-value">{summary.totalSales}円</div></div>
             </div>
 
-            {stats.items.length > 0 ? (
-                <div className="chart-container">
-                    <div className="chart-wrapper">
-                        <h3>品名ごとの売上</h3>
-                        <Bar data={chartData} options={{ responsive: true, plugins: { title: { display: true, text: '品名ごとの売上・販売数' } } }} />
-                    </div>
-                    <div className="chart-wrapper">
-                        <h3>売上割合</h3>
-                        <Pie data={pieChartData} options={{ responsive: true, plugins: { title: { display: true, text: '品名ごとの売上割合' } } }}/>
-                    </div>
+            {hourlySalesData.datasets.length > 0 || perRecipeStats.length > 0 ? (
+                <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', marginTop: '24px' }}>
+                    <div style={{ width: '60%', maxHeight: '300px' }}><Line data={hourlySalesData} options={hourlySalesOptions} /></div>
+                    <div style={{ width: '30%', maxHeight: '300px' }}><Pie data={pieChartData} options={{ responsive: true, plugins: { title: { display: true, text: '品名ごとの売上割合' } } }}/></div>
                 </div>
             ) : (
                 <p className="hint" style={{textAlign: 'center', margin: '20px 0'}}>該当する売上データがありません。</p>
@@ -490,7 +531,7 @@ const RecipeForm = ({ materials, setRecipes, nextRecipeId, setNextRecipeId }) =>
 
   return (
     <form id="recipe-form" onSubmit={handleSubmit}>
-      <h2>品名プリセット（料理）</h2>
+      <h2>品名（料理）</h2>
       <div className="form-row">
         <div style={{ flex: 1, minWidth: '200px' }}>
           <label htmlFor="recipe-name">品名（料理名）</label>
