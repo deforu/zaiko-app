@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/zaiko-app/static/css/main.e1650172.css",
-    "main.js": "/zaiko-app/static/js/main.d08f332a.js",
+    "main.js": "/zaiko-app/static/js/main.bb25c82e.js",
     "static/js/453.5151ac77.chunk.js": "/zaiko-app/static/js/453.5151ac77.chunk.js",
     "index.html": "/zaiko-app/index.html",
     "main.e1650172.css.map": "/zaiko-app/static/css/main.e1650172.css.map",
-    "main.d08f332a.js.map": "/zaiko-app/static/js/main.d08f332a.js.map",
+    "main.bb25c82e.js.map": "/zaiko-app/static/js/main.bb25c82e.js.map",
     "453.5151ac77.chunk.js.map": "/zaiko-app/static/js/453.5151ac77.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.e1650172.css",
-    "static/js/main.d08f332a.js"
+    "static/js/main.bb25c82e.js"
   ]
 }
