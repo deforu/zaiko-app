@@ -3,6 +3,8 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearSca
 import { Bar, Pie } from 'react-chartjs-2';
 import './App.css';
 
+import { Settings } from './Settings';
+
 // Chart.js の必要なコンポーネントを登録
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
 
@@ -55,6 +57,7 @@ function App() {
   const [recipes, setRecipes] =useState([]);
   const [salesLog, setSalesLog] = useState([]);
   const [activeTab, setActiveTab] = useState('materials');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // --- ID管理 ---
   const [nextMaterialId, setNextMaterialId] = useState(1);
@@ -186,7 +189,27 @@ function App() {
 
   return (
     <>
-      <h1>在庫＆品名管理システム</h1>
+      <div className="header">
+        <h1>在庫＆品名管理システム</h1>
+        <button onClick={() => setIsSettingsOpen(true)} className="settings-button">
+          ⚙️
+        </button>
+      </div>
+
+      {isSettingsOpen && (
+        <Settings
+          materials={materials}
+          recipes={recipes}
+          salesLog={salesLog}
+          setMaterials={setMaterials}
+          setRecipes={setRecipes}
+          setSalesLog={setSalesLog}
+          setNextMaterialId={setNextMaterialId}
+          setNextRecipeId={setNextRecipeId}
+          setNextSaleId={setNextSaleId}
+          onClose={() => setIsSettingsOpen(false)}
+        />
+      )}
 
       <StatsView salesLog={salesLog} recipes={recipes} />
 
