@@ -279,6 +279,15 @@ const StatsView = ({ salesLog, recipes }) => {
     const [filterType, setFilterType] = useState('today'); // 'today', 'all', 'custom'
     const [startDate, setStartDate] = useState(getTodayKey());
     const [endDate, setEndDate] = useState(getTodayKey());
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 768);
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     const { summary, perRecipeStats, hourlySalesData } = useMemo(() => {
         let log = salesLog;
@@ -326,7 +335,7 @@ const StatsView = ({ salesLog, recipes }) => {
             // 時間帯別集計
             const hour = new Date(sale.timestamp || sale.date).getHours();
             if (!hourlySales.has(sale.recipeId)) {
-                hourlySales.set(sale.recipeId, { name, data: Array(24).fill(null) });
+                hourlySales.set(sale.recipeId, { name, data: Array(24).fill(null) }); // Initialize with null
             }
             const recipeHourData = hourlySales.get(sale.recipeId).data;
             recipeHourData[hour] = (recipeHourData[hour] || 0) + sale.qty;
@@ -372,9 +381,36 @@ const StatsView = ({ salesLog, recipes }) => {
         plugins: { title: { display: true, text: '時間帯別 売上数' } },
         scales: {
             x: { title: { display: true, text: '時間' } },
-            y: { title: { display: true, text: '個数' }, beginAtZero: true }
+            y: { 
+                title: { display: true, text: '個数' }, 
+                beginAtZero: false, // Removed this
+                min: 1, // Start from 1
+                ticks: {
+                    stepSize: 1,
+                    precision: 0,
+                }
+            }
         },
         aspectRatio: 2,
+    };
+
+    const chartContainerStyle = {
+        display: 'flex',
+        justifyContent: 'space-around',
+        alignItems: 'center',
+        marginTop: '24px',
+        flexDirection: isMobile ? 'column' : 'row',
+    };
+
+    const lineChartStyle = {
+        width: isMobile ? '100%' : '60%',
+        maxHeight: '300px',
+    };
+    
+    const pieChartStyle = {
+        width: isMobile ? '70%' : '30%', // Adjusted for mobile
+        maxHeight: '300px',
+        marginTop: isMobile ? '2rem' : 0,
     };
 
     return (
@@ -399,9 +435,9 @@ const StatsView = ({ salesLog, recipes }) => {
             </div>
 
             {hourlySalesData.datasets.length > 0 || perRecipeStats.length > 0 ? (
-                <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', marginTop: '24px' }}>
-                    <div style={{ width: '60%', maxHeight: '300px' }}><Line data={hourlySalesData} options={hourlySalesOptions} /></div>
-                    <div style={{ width: '30%', maxHeight: '300px' }}><Pie data={pieChartData} options={{ responsive: true, plugins: { title: { display: true, text: '品名ごとの売上割合' } } }}/></div>
+                <div style={chartContainerStyle}>
+                    <div style={lineChartStyle}><Line data={hourlySalesData} options={hourlySalesOptions} /></div>
+                    <div style={pieChartStyle}><Pie data={pieChartData} options={{ responsive: true, plugins: { title: { display: true, text: '品名ごとの売上割合' } } }}/></div>
                 </div>
             ) : (
                 <p className="hint" style={{textAlign: 'center', margin: '20px 0'}}>該当する売上データがありません。</p>
