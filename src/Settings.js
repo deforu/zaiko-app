@@ -14,6 +14,7 @@ export const Settings = ({
   setNextRecipeId,
   setNextSaleId,
   onClose,
+  onClearAllData,
 }) => {
 
   const handleExport = async () => {
@@ -109,7 +110,7 @@ export const Settings = ({
   return (
     <div className="modal-overlay">
       <div className="modal-content">
-        <h2>設定：データのインポートとエクスポート</h2>
+        <h2>設定</h2>
         <button onClick={onClose} className="modal-close-button">×</button>
 
         <div className="setting-section">
@@ -120,9 +121,16 @@ export const Settings = ({
 
         <div className="setting-section">
           <h3>インポート</h3>
-          <p className="danger">注意：インポートすると現在のデータは上書きされます。</p>
           <p>バックアップファイル（.zip）を選択して、データを復元します。</p>
-          <input type="file" accept=".zip" onChange={handleImport} />
+          <p className="danger">注意：インポートすると現在のデータは上書きされます。</p>
+          <input type="file" id="import-file" accept=".zip" onChange={handleImport} style={{ display: 'none' }} />
+          <label htmlFor="import-file" className="btn-secondary">ファイルを選択</label>
+        </div>
+        
+        <div className="setting-section">
+          <h3>初期化</h3>
+          <p className="danger">注意：すべてのデータが削除され、元に戻すことはできません。</p>
+          <button onClick={onClearAllData} className="btn-danger">全データ削除（初期化）</button>
         </div>
       </div>
     </div>

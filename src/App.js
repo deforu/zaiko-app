@@ -53,30 +53,9 @@ function parseDateString(dateString) {
 
 function App() {
   // --- ステート定義 ---
-  const [materials, setMaterials] = useState([
-    { id: 1, name: '玉ねぎ', stock: 50, deadline: 10, consumed: 10 },
-    { id: 2, name: '豚肉', stock: 30, deadline: 5, consumed: 5 },
-    { id: 3, name: 'キャベツ', stock: 40, deadline: 8, consumed: 8 },
-    { id: 4, name: '麺', stock: 100, deadline: 20, consumed: 20 },
-  ]);
-  const [recipes, setRecipes] =useState([
-    { id: 1, name: '豚玉', price: 600, items: [{ materialId: 1, qty: 1 }, { materialId: 2, qty: 0.5 }, { materialId: 3, qty: 1 }], soldCount: 3 },
-    { id: 2, name: '焼きそば', price: 750, items: [{ materialId: 4, qty: 1 }, { materialId: 3, qty: 0.8 }, { materialId: 2, qty: 0.7 }, { materialId: 1, qty: 0.5 }], soldCount: 5 },
-  ]);
-  const [salesLog, setSalesLog] = useState([
-    { id: 1, recipeId: 1, qty: 1, pricePerUnit: 600, timestamp: new Date(new Date().setHours(8, 0, 0, 0)).toISOString() },
-    { id: 2, recipeId: 2, qty: 1, pricePerUnit: 750, timestamp: new Date(new Date().setHours(8, 30, 0, 0)).toISOString() },
-    { id: 3, recipeId: 1, qty: 2, pricePerUnit: 600, timestamp: new Date(new Date().setHours(9, 0, 0, 0)).toISOString() },
-    { id: 4, recipeId: 2, qty: 1, pricePerUnit: 750, timestamp: new Date(new Date().setHours(9, 15, 0, 0)).toISOString() },
-    { id: 5, recipeId: 1, qty: 1, pricePerUnit: 600, timestamp: new Date(new Date().setHours(10, 0, 0, 0)).toISOString() },
-    { id: 6, recipeId: 2, qty: 2, pricePerUnit: 750, timestamp: new Date(new Date().setHours(10, 45, 0, 0)).toISOString() },
-    { id: 7, recipeId: 1, qty: 1, pricePerUnit: 600, timestamp: new Date(new Date().setHours(11, 30, 0, 0)).toISOString() },
-    { id: 8, recipeId: 2, qty: 1, pricePerUnit: 750, timestamp: new Date(new Date().setHours(12, 0, 0, 0)).toISOString() },
-    { id: 9, recipeId: 1, qty: 3, pricePerUnit: 600, timestamp: new Date(new Date().setHours(13, 0, 0, 0)).toISOString() },
-    { id: 10, recipeId: 2, qty: 2, pricePerUnit: 750, timestamp: new Date(new Date().setHours(13, 30, 0, 0)).toISOString() },
-    { id: 11, recipeId: 1, qty: 1, pricePerUnit: 600, timestamp: new Date(new Date().setHours(14, 0, 0, 0)).toISOString() },
-    { id: 12, recipeId: 2, qty: 1, pricePerUnit: 750, timestamp: new Date(new Date().setHours(14, 15, 0, 0)).toISOString() },
-  ]);
+  const [materials, setMaterials] = useState([]);
+  const [recipes, setRecipes] = useState([]);
+  const [salesLog, setSalesLog] = useState([]);
   const [activeTab, setActiveTab] = useState('materials');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -87,29 +66,17 @@ function App() {
 
   // --- 初期ロード (useEffect) ---
   useEffect(() => {
-    const initialMaterials = loadFromStorage(MATERIALS_KEY, materials).map(m => ({ ...m, consumed: m.consumed ?? 0 }));
+    const initialMaterials = loadFromStorage(MATERIALS_KEY).map(m => ({ ...m, consumed: m.consumed ?? 0 }));
     setMaterials(initialMaterials);
-    if (initialMaterials.length > 0) {
-      setNextMaterialId(Math.max(...initialMaterials.map(m => m.id), 0) + 1);
-    } else {
-      setNextMaterialId(Math.max(...materials.map(m => m.id), 0) + 1);
-    }
+    setNextMaterialId(Math.max(...initialMaterials.map(m => m.id), 0) + 1);
 
-    const initialRecipes = loadFromStorage(RECIPES_KEY, recipes).map(r => ({ ...r, soldCount: r.soldCount ?? 0, price: r.price ?? 0 }));
+    const initialRecipes = loadFromStorage(RECIPES_KEY).map(r => ({ ...r, soldCount: r.soldCount ?? 0, price: r.price ?? 0 }));
     setRecipes(initialRecipes);
-    if (initialRecipes.length > 0) {
-      setNextRecipeId(Math.max(...initialRecipes.map(r => r.id), 0) + 1);
-    } else {
-      setNextRecipeId(Math.max(...recipes.map(r => r.id), 0) + 1);
-    }
+    setNextRecipeId(Math.max(...initialRecipes.map(r => r.id), 0) + 1);
 
-    const initialSales = loadFromStorage(SALES_KEY, salesLog);
+    const initialSales = loadFromStorage(SALES_KEY);
     setSalesLog(initialSales);
-    if (initialSales.length > 0) {
-      setNextSaleId(Math.max(...initialSales.map(s => s.id), 0) + 1);
-    } else {
-      setNextSaleId(Math.max(...salesLog.map(s => s.id), 0) + 1);
-    }
+    setNextSaleId(Math.max(...initialSales.map(s => s.id), 0) + 1);
   }, []);
 
   // --- データ保存 (useEffect) ---
@@ -214,6 +181,28 @@ function App() {
     }
   };
 
+  const handleClearAllData = () => {
+    if (window.confirm('すべてのデータを削除して初期化します。本当によろしいですか？この操作は元に戻せません。')) {
+      // Clear state
+      setMaterials([]);
+      setRecipes([]);
+      setSalesLog([]);
+      
+      // Reset IDs
+      setNextMaterialId(1);
+      setNextRecipeId(1);
+      setNextSaleId(1);
+
+      // Clear local storage
+      localStorage.removeItem(MATERIALS_KEY);
+      localStorage.removeItem(RECIPES_KEY);
+      localStorage.removeItem(SALES_KEY);
+      
+      alert('すべてのデータが削除されました。');
+      setIsSettingsOpen(false); // Close settings modal
+    }
+  };
+
   return (
     <>
       <div className="header">
@@ -235,6 +224,7 @@ function App() {
           setNextRecipeId={setNextRecipeId}
           setNextSaleId={setNextSaleId}
           onClose={() => setIsSettingsOpen(false)}
+          onClearAllData={handleClearAllData}
         />
       )}
 
